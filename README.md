@@ -15,6 +15,7 @@ The backend of the Leave Management System is responsible for handling the busin
 
 - Authentication: Secure endpoints with JWT authentication.
 - Employee Management: CRUD operations for managing employee profiles.
+- Logging: Logs API requests and responses for monitoring and debugging.
 
 ## Installation
 
@@ -60,3 +61,4 @@ Note: Refer to the database schema for detailed table structures and relationshi
 - Sequelize (ORM)
 - PostgreSQL (Database)
 - JWT (JSON Web Tokens) for authentication
+- Winston Logger for logging requests and responses
