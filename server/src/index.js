@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const logger = require("./config/logger");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
 const { sequelize } = require("./config/database");
 
 const authRoutes = require("./routes/authRoutes");
@@ -11,6 +13,9 @@ const app = express();
 const PORT = 3000;
 
 app.use(bodyParser.json());
+
+// Swagger setup
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/employee", employeeRoutes);

@@ -29,23 +29,25 @@ const login = async (req, res) => {
     return res.status(401).json({ message: "Invalid email" });
   }
 
-  let login = await Login.findOne({ where: { employee_id: employee.id } });
+  let loginUser = await Login.findOne({ where: { employee_id: employee.id } });
 
-  if (login) {
-    const isPasswordMatch = await bcrypt.compare(password, login.password);
+  if (loginUser) {
+    const isPasswordMatch = await bcrypt.compare(password, loginUser.password);
 
     if (!isPasswordMatch) {
       logger.warn("Invalid password", { email });
       return res.status(401).json({ message: "Invalid password" });
     }
   } else {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    login = await Login.create({
+    await Login.create({
       employee_id: employee.id,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
     });
   }
 
+  let storedToken = await RefreshToken.findOne({
+    where: { employee_id: employee.id },
+  });
   const accessToken = generateAccessToken(employee);
   const refreshToken = generateRefreshToken(employee);
 
@@ -55,6 +57,7 @@ const login = async (req, res) => {
     token: refreshToken,
     expires_at: calculateExpirationDate(config.refreshTokenExpiration),
   });
+  await storedToken.destroy();
 
   logger.info("User logged in", { email, employee_id: employee.id });
   return res.status(200).json({ accessToken, refreshToken });
@@ -69,11 +72,11 @@ const refreshToken = async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, config.refreshTokenSecret);
+    const decoded = jwt.verify(token, config.secretKey);
 
     // Check if the token exists in the database
-    const storedToken = await RefreshToken.findOne({
-      where: { token, employee_id: decoded.id },
+    let storedToken = await RefreshToken.findOne({
+      where: { employee_id: decoded.id },
     });
 
     if (!storedToken) {
