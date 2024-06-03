@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const logger = require("../config/logger");
 const config = require("../config/jwt.config");
 const Login = require("../models/login.model");
 const Employee = require("../models/employee.model");
@@ -24,6 +25,7 @@ const login = async (req, res) => {
   const employee = await Employee.findOne({ where: { email } });
 
   if (!employee) {
+    logger.warn("Invalid email", { email });
     return res.status(401).json({ message: "Invalid email" });
   }
 
@@ -33,6 +35,7 @@ const login = async (req, res) => {
     const isPasswordMatch = await bcrypt.compare(password, login.password);
 
     if (!isPasswordMatch) {
+      logger.warn("Invalid password", { email });
       return res.status(401).json({ message: "Invalid password" });
     }
   } else {
@@ -53,6 +56,7 @@ const login = async (req, res) => {
     expires_at: calculateExpirationDate(config.refreshTokenExpiration),
   });
 
+  logger.info("User logged in", { email, employee_id: employee.id });
   return res.status(200).json({ accessToken, refreshToken });
 };
 
@@ -60,18 +64,20 @@ const refreshToken = async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
+    logger.warn("Access token is required");
     return res.status(401).json({ message: "Access token is required" });
   }
 
-  const decoded = jwt.verify(token, config.refreshTokenSecret);
-
   try {
+    const decoded = jwt.verify(token, config.refreshTokenSecret);
+
     // Check if the token exists in the database
     const storedToken = await RefreshToken.findOne({
       where: { token, employee_id: decoded.id },
     });
 
     if (!storedToken) {
+      logger.warn("Invalid refresh token", { token });
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
@@ -91,12 +97,14 @@ const refreshToken = async (req, res) => {
     // Optionally, revoke the old refresh token
     await storedToken.destroy();
 
+    logger.info("Refresh token used", { employee_id: user.id });
     return res.status(200).json({
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
       expires_at: expiresAt,
     });
   } catch (err) {
+    logger.error("Invalid refresh token", { error: err.message });
     return res.status(401).json({ message: "Invalid refresh token" });
   }
 };

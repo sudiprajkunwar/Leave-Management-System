@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
+const logger = require("./config/logger");
 const { sequelize } = require("./config/database");
 
 const authRoutes = require("./routes/authRoutes");
@@ -16,7 +17,7 @@ app.use("/api/employee", employeeRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error(err.stack);
   res.status(500).send("Something went wrong!");
 });
 
@@ -24,11 +25,11 @@ app.use((err, req, res, next) => {
 sequelize
   .authenticate()
   .then(() => {
-    console.log("Connected to the database");
+    logger.info("Connected to the database");
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      logger.info(`Server is running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("Unable to connect to the database:", err);
+    logger.error("Unable to connect to the database:", err);
   });
