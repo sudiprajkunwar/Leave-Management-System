@@ -14,7 +14,7 @@ const RefreshToken = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Employees", // Assuming your employee model is named "Employees"
+        model: "Employees",
         key: "id",
       },
     },
@@ -30,7 +30,7 @@ const RefreshToken = sequelize.define(
   },
   {
     tableName: "refresh_tokens",
-    timestamps: false, // Disable timestamps as they are managed by the migration
+    timestamps: false,
   }
 );
 

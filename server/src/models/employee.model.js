@@ -57,7 +57,7 @@ const Employee = sequelize.define(
   },
   {
     tableName: "employees",
-    timestamps: false, // Disable timestamps as they are managed by the migration
+    timestamps: false,
   }
 );
 

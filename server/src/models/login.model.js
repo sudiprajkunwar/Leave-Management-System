@@ -19,7 +19,7 @@ const Login = sequelize.define(
   },
   {
     tableName: "login",
-    timestamps: false, // Disable timestamps as they are managed by the migration
+    timestamps: false,
   }
 );
 

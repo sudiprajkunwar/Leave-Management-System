@@ -6,19 +6,7 @@ const config = require("../config/jwt.config");
 const Login = require("../models/login.model");
 const Employee = require("../models/employee.model");
 const RefreshToken = require("../models/refreshToken.model");
-const { calculateExpirationDate } = require("../utils/date");
-
-const generateAccessToken = (emp) => {
-  return jwt.sign({ id: emp.id }, config.secretKey, {
-    expiresIn: config.tokenExpiration,
-  });
-};
-
-const generateRefreshToken = (emp) => {
-  return jwt.sign({ id: emp.id }, config.refreshTokenSecret, {
-    expiresIn: config.refreshTokenExpiration,
-  });
-};
+const updateRefreshToken = require("../services/authServices");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -45,22 +33,11 @@ const login = async (req, res) => {
     });
   }
 
-  let storedToken = await RefreshToken.findOne({
-    where: { employee_id: employee.id },
-  });
-  const accessToken = generateAccessToken(employee);
-  const refreshToken = generateRefreshToken(employee);
-
-  // Store the refresh token in the database
-  await RefreshToken.create({
-    employee_id: employee.id,
-    token: refreshToken,
-    expires_at: calculateExpirationDate(config.refreshTokenExpiration),
-  });
-  await storedToken.destroy();
+  const { newAccessToken, newRefreshToken, expires_at } =
+    await updateRefreshToken(employee.id);
 
   logger.info("User logged in", { email, employee_id: employee.id });
-  return res.status(200).json({ accessToken, refreshToken });
+  return res.status(200).json({ newAccessToken, newRefreshToken, expires_at });
 };
 
 const refreshToken = async (req, res) => {
@@ -84,27 +61,16 @@ const refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
-    const user = await Employee.findByPk(decoded.id);
+    const emp = await Employee.findByPk(decoded.id);
 
-    const newAccessToken = generateAccessToken(user);
-    const newRefreshToken = generateRefreshToken(user);
-    const expiresAt = calculateExpirationDate(config.refreshTokenExpiration);
+    const { newAccessToken, newRefreshToken, expires_at } =
+      await updateRefreshToken(emp.id);
 
-    // Store the new refresh token in the database
-    await RefreshToken.create({
-      employee_id: user.id,
-      token: newRefreshToken,
-      expires_at: expiresAt,
-    });
-
-    // Optionally, revoke the old refresh token
-    await storedToken.destroy();
-
-    logger.info("Refresh token used", { employee_id: user.id });
+    logger.info("Refresh token used", { employee_id: emp.id });
     return res.status(200).json({
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
-      expires_at: expiresAt,
+      expires_at,
     });
   } catch (err) {
     logger.error("Invalid refresh token", { error: err.message });
